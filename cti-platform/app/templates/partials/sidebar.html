@@ -1,0 +1,56 @@
+<nav class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <i class="bi bi-shield-lock-fill"></i>
+        <span>CTI Platform</span>
+    </div>
+
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.endpoint == 'dashboard.index' }}">
+                <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('event.list_events') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('event.') }}">
+                <i class="bi bi-diagram-3-fill"></i> <span>Threat Events</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('ioc.list_iocs') }}" class="{{ 'active' if request.endpoint == 'ioc.list_iocs' }}">
+                <i class="bi bi-bullseye"></i> <span>IOC Management</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('ioc.search') }}" class="{{ 'active' if request.endpoint == 'ioc.search' }}">
+                <i class="bi bi-search"></i> <span>Threat Search</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('report.list_reports') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('report.') }}">
+                <i class="bi bi-file-earmark-pdf-fill"></i> <span>Reports</span>
+            </a>
+        </li>
+        {% if current_user.is_admin() %}
+        <li class="nav-divider">Administration</li>
+        <li>
+            <a href="{{ url_for('settings.index') }}" class="{{ 'active' if request.endpoint == 'settings.index' }}">
+                <i class="bi bi-gear-fill"></i> <span>API Settings</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('auth.manage_users') }}" class="{{ 'active' if request.endpoint == 'auth.manage_users' }}">
+                <i class="bi bi-people-fill"></i> <span>Users</span>
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('settings.activity_logs') }}" class="{{ 'active' if request.endpoint == 'settings.activity_logs' }}">
+                <i class="bi bi-clock-history"></i> <span>Activity Logs</span>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+
+    <div class="sidebar-footer">
+        <small>CTI Platform v1.0<br>Powered by Indicators of Compromise</small>
+    </div>
+</nav>

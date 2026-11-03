@@ -1,0 +1,31 @@
+<header class="topbar">
+    <button id="sidebarToggle" class="btn btn-sm btn-light d-md-none">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <form class="topbar-search" action="{{ url_for('ioc.search') }}" method="get">
+        <i class="bi bi-search"></i>
+        <input type="text" name="q" placeholder="Search IP, domain, URL, email, or hash..."
+               value="{{ request.args.get('q', '') }}">
+    </form>
+
+    <div class="topbar-right">
+        <span class="badge role-badge {{ 'bg-danger' if current_user.role == 'admin' else 'bg-info' }}">
+            {{ current_user.role|title }}
+        </span>
+        <div class="dropdown">
+            <button class="btn btn-light dropdown-toggle user-menu-btn" type="button"
+                    data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i>
+                {{ current_user.full_name or current_user.username }}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><span class="dropdown-item-text text-muted small">{{ current_user.email }}</span></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</header>

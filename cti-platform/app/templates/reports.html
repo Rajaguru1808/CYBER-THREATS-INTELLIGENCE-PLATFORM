@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h2><i class="bi bi-file-earmark-pdf-fill"></i> Reports</h2>
+        <p class="text-muted">Generate and download PDF threat intelligence reports</p>
+    </div>
+    <form method="post" action="{{ url_for('report.generate_summary') }}">
+        <button class="btn btn-primary"><i class="bi bi-file-earmark-plus"></i> Generate Summary Report</button>
+    </form>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Generate Event Report</div>
+    <div class="card-body">
+        <form class="row g-2 align-items-end" method="post"
+              action="{{ url_for('report.generate_for_event', event_id=0) }}"
+              onsubmit="this.action = this.action.replace('/0', '/' + document.getElementById('eventSelect').value); return document.getElementById('eventSelect').value !== '';">
+            <div class="col-md-9">
+                <label class="form-label">Select Event</label>
+                <select class="form-select" id="eventSelect" required>
+                    <option value="" disabled selected>Choose an event...</option>
+                    {% for ev in events %}
+                    <option value="{{ ev.id }}">{{ ev.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-file-earmark-pdf"></i> Generate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Generated Reports</div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Title</th><th>Type</th><th>Generated</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+            {% for r in reports %}
+                <tr>
+                    <td>{{ r.title }}</td>
+                    <td><span class="badge bg-secondary">{{ r.report_type|title }}</span></td>
+                    <td class="small text-muted">{{ r.created_at.strftime('%d %b %Y %H:%M') }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('report.download_report', report_id=r.id) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                        <form method="post" action="{{ url_for('report.delete_report', report_id=r.id) }}" class="d-inline"
+                              onsubmit="return confirm('Delete this report?');">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4" class="text-center text-muted py-4">No reports generated yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

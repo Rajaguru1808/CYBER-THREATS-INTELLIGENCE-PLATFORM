@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Bulk IOC Check{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h2><i class="bi bi-stack"></i> Bulk IOC Check</h2>
+        <p class="text-muted">Paste multiple IPs, domains, URLs, hashes, or emails (one per line) &mdash;
+            each one is automatically type-detected, saved, and checked against
+            VirusTotal / OTX / AbuseIPDB.</p>
+    </div>
+    <a href="{{ url_for('ioc.list_iocs') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to IOC Management
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="post" action="{{ url_for('ioc.bulk_check') }}">
+            <div class="mb-3">
+                <label class="form-label">Values (one per line)</label>
+                <textarea class="form-control" name="values" rows="10" required
+                    placeholder="8.8.8.8&#10;evil-domain.com&#10;https://phish.example.com/login&#10;a1b2c3d4e5f6...&#10;attacker@evil.com"></textarea>
+            </div>
+            <div class="mb-3 col-md-4">
+                <label class="form-label">Attach to Event (optional)</label>
+                <select class="form-select" name="event_id">
+                    <option value="">-- No event --</option>
+                    {% for e in events %}
+                    <option value="{{ e.id }}">{{ e.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-shield-check"></i> Check All
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if results %}
+<div class="card">
+    <div class="card-header">
+        <strong>Results</strong> ({{ results|length }} lines processed)
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Value</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td class="text-break">{{ r.value }}</td>
+                    <td>{% if r.type %}<span class="badge bg-secondary">{{ r.type|replace('_',' ')|upper }}</span>{% else %}&mdash;{% endif %}</td>
+                    <td>
+                        {% if r.severity %}
+                        <span class="badge severity-{{ r.severity }}">{{ r.severity|upper }}</span>
+                        {% else %}&mdash;{% endif %}
+                    </td>
+                    <td class="text-muted small">{{ r.status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

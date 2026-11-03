@@ -1,0 +1,11 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+PyMySQL==1.1.1
+python-dotenv==1.0.1
+pymisp==2.4.193
+requests==2.32.3
+reportlab==4.2.5
+click==8.1.7
+cryptography==43.0.1

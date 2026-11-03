@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+    <p class="text-muted">Overview of current threat landscape</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <a href="{{ url_for('event.list_events') }}" class="text-decoration-none">
+        <div class="stat-card stat-primary">
+            <div class="stat-icon"><i class="bi bi-diagram-3-fill"></i></div>
+            <div>
+                <div class="stat-value">{{ stats.total_events }}</div>
+                <div class="stat-label">Total Threat Events</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ url_for('event.list_events', threat_level='critical') }}" class="text-decoration-none">
+        <div class="stat-card stat-danger">
+            <div class="stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div>
+                <div class="stat-value">{{ stats.critical_events }}</div>
+                <div class="stat-label">Critical Threats</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ url_for('ioc.list_iocs') }}" class="text-decoration-none">
+        <div class="stat-card stat-warning">
+            <div class="stat-icon"><i class="bi bi-bullseye"></i></div>
+            <div>
+                <div class="stat-value">{{ stats.total_iocs }}</div>
+                <div class="stat-label">IOC Count</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ url_for('ioc.list_iocs', correlated='yes') }}" class="text-decoration-none">
+        <div class="stat-card stat-success">
+            <div class="stat-icon"><i class="bi bi-link-45deg"></i></div>
+            <div>
+                <div class="stat-value">{{ stats.correlated_iocs }}</div>
+                <div class="stat-label">Correlated IOCs</div>
+            </div>
+        </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-4">
+        <div class="card chart-card">
+            <div class="card-header">IOC Severity Breakdown</div>
+            <div class="card-body"><canvas id="severityChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card chart-card">
+            <div class="card-header">IOC Type Distribution</div>
+            <div class="card-body"><canvas id="iocTypeChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card chart-card">
+            <div class="card-header">Events by Analysis Status</div>
+            <div class="card-body"><canvas id="statusChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recent Events</span>
+                <a href="{{ url_for('event.list_events') }}" class="btn btn-sm btn-outline-primary">View all</a>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr><th>Title</th><th>Threat Level</th><th>Status</th><th>Date</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for e in stats.recent_events %}
+                        <tr onclick="window.location='{{ url_for('event.view_event', event_id=e.id) }}'" style="cursor:pointer">
+                            <td>{{ e.title }}</td>
+                            <td><span class="badge severity-{{ e.threat_level }}">{{ e.threat_level|upper }}</span></td>
+                            <td>{{ e.analysis_status|title }}</td>
+                            <td>{{ e.event_date or '—' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">No events yet.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">Threat Feed Status</div>
+            <div class="card-body">
+                {% for feed in stats.feed_status %}
+                <div class="feed-status-row">
+                    <div>
+                        <i class="bi bi-hdd-network"></i>
+                        <strong>{{ feed.service_name|upper }}</strong>
+                    </div>
+                    <span class="badge {{ 'bg-success' if feed.status == 'connected' else ('bg-secondary' if feed.status == 'unknown' else 'bg-danger') }}">
+                        {{ feed.status|title }}
+                    </span>
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No API feeds configured yet. Visit Settings to add one.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const severityData = {{ stats.severity_breakdown | tojson }};
+const iocTypeData = {{ stats.ioc_type_breakdown | tojson }};
+const statusData = {{ stats.events_by_status | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

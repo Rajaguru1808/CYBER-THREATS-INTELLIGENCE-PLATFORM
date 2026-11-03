@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Threat Events{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h2><i class="bi bi-diagram-3-fill"></i> Threat Events</h2>
+        <p class="text-muted">Create and manage threat events, and sync with MISP</p>
+    </div>
+    <div class="d-flex gap-2">
+        <form method="post" action="{{ url_for('import_data.import_from_misp') }}">
+            <button class="btn btn-outline-secondary"><i class="bi bi-cloud-download"></i> Import from MISP</button>
+        </form>
+        <form method="post" action="{{ url_for('import_data.import_from_otx') }}">
+            <button class="btn btn-outline-secondary"><i class="bi bi-cloud-download"></i> Import from OTX</button>
+        </form>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventModal">
+            <i class="bi bi-plus-lg"></i> New Event
+        </button>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-2" method="get">
+            <div class="col-md-4">
+                <select class="form-select" name="threat_level">
+                    <option value="">All Threat Levels</option>
+                    {% for lvl in ['critical','high','medium','low'] %}
+                    <option value="{{ lvl }}" {{ 'selected' if filters.threat_level == lvl }}>{{ lvl|upper }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    {% for s in ['initial','ongoing','completed'] %}
+                    <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+{% for event in events %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card event-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span class="badge severity-{{ event.threat_level }}">{{ event.threat_level|upper }}</span>
+                    {% if event.misp_event_id %}
+                    <span class="badge bg-dark"><i class="bi bi-diagram-3"></i> MISP</span>
+                    {% endif %}
+                </div>
+                <h5 class="mt-2"><a href="{{ url_for('event.view_event', event_id=event.id) }}">{{ event.title }}</a></h5>
+                <p class="text-muted small mb-2">{{ (event.description or '')[:100] }}{% if event.description and event.description|length > 100 %}...{% endif %}</p>
+                <div class="d-flex justify-content-between align-items-center small text-muted">
+                    <span><i class="bi bi-bullseye"></i> {{ event.ioc_count() }} IOCs</span>
+                    <span>{{ event.analysis_status|title }}</span>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                <small class="text-muted">{{ event.event_date or '—' }}</small>
+                <a href="{{ url_for('event.view_event', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="col-12">
+        <div class="text-center text-muted py-5">No threat events found.</div>
+    </div>
+{% endfor %}
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center flex-wrap">
+        {% for p in range(1, pagination.pages + 1) %}
+        <li class="page-item {{ 'active' if p == pagination.page }}">
+            <a class="page-link" href="{{ url_for('event.list_events', page=p, **filters) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Add Event Modal -->
+<div class="modal fade" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" action="{{ url_for('event.create_event') }}">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Threat Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-control" name="title" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" name="description" rows="3"></textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Threat Level</label>
+                        <select class="form-select" name="threat_level">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="analysis_status">
+                            <option value="initial">Initial</option>
+                            <option value="ongoing">Ongoing</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Event Date</label>
+                        <input type="date" class="form-control" name="event_date">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Organization</label>
+                    <input type="text" class="form-control" name="org" value="CTI-Platform">
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="push_to_misp" id="pushMisp">
+                    <label class="form-check-label" for="pushMisp">Push this event to MISP immediately</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Create Event</button>
+            </div>
+        </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

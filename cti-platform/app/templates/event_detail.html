@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.title }}{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <a href="{{ url_for('event.list_events') }}" class="text-muted small"><i class="bi bi-arrow-left"></i> Back to events</a>
+        <h2 class="mt-1">{{ event.title }}</h2>
+        <span class="badge severity-{{ event.threat_level }} me-1">{{ event.threat_level|upper }}</span>
+        <span class="badge bg-secondary">{{ event.analysis_status|title }}</span>
+        {% if event.misp_event_id %}<span class="badge bg-dark">Linked to MISP #{{ event.misp_event_id }}</span>{% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        <form method="post" action="{{ url_for('report.generate_for_event', event_id=event.id) }}">
+            <button class="btn btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> Generate PDF Report</button>
+        </form>
+        <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editEventModal">
+            <i class="bi bi-pencil"></i> Edit
+        </button>
+        <form method="post" action="{{ url_for('event.delete_event', event_id=event.id) }}"
+              onsubmit="return confirm('Delete this event and all its IOCs?');">
+            <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">Description</div>
+            <div class="card-body">
+                <p>{{ event.description or 'No description provided.' }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">Details</div>
+            <div class="card-body small">
+                <p><strong>Organization:</strong> {{ event.org or 'N/A' }}</p>
+                <p><strong>Event Date:</strong> {{ event.event_date or 'N/A' }}</p>
+                <p><strong>Published:</strong> {{ 'Yes' if event.is_published else 'No' }}</p>
+                <p><strong>Created:</strong> {{ event.created_at.strftime('%d %b %Y %H:%M') }}</p>
+                <p class="mb-0"><strong>Total IOCs:</strong> {{ iocs|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Indicators of Compromise ({{ iocs|length }})</div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Type</th><th>Value</th><th>Severity</th><th>Source</th><th>Correlated</th></tr></thead>
+            <tbody>
+            {% for ioc in iocs %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ ioc.ioc_type|replace('_',' ')|upper }}</span></td>
+                    <td>{{ ioc.ioc_value }}</td>
+                    <td><span class="badge severity-{{ ioc.severity }}">{{ ioc.severity|upper }}</span></td>
+                    <td class="small text-muted">{{ ioc.source }}</td>
+                    <td>
+                        {% if ioc.is_correlated %}
+                        <span class="badge bg-info">{{ ioc.correlation_count }} related</span>
+                        {% else %}<span class="text-muted small">—</span>{% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No IOCs linked to this event yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Edit Event Modal -->
+<div class="modal fade" id="editEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="post" action="{{ url_for('event.update_event', event_id=event.id) }}">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Title</label>
+                    <input type="text" class="form-control" name="title" value="{{ event.title }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" name="description" rows="3">{{ event.description }}</textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Threat Level</label>
+                        <select class="form-select" name="threat_level">
+                            {% for lvl in ['low','medium','high','critical'] %}
+                            <option value="{{ lvl }}" {{ 'selected' if event.threat_level == lvl }}>{{ lvl|upper }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="analysis_status">
+                            {% for s in ['initial','ongoing','completed'] %}
+                            <option value="{{ s }}" {{ 'selected' if event.analysis_status == s }}>{{ s|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Event Date</label>
+                        <input type="date" class="form-control" name="event_date" value="{{ event.event_date }}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Organization</label>
+                    <input type="text" class="form-control" name="org" value="{{ event.org or '' }}">
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_published" id="isPublished"
+                           {{ 'checked' if event.is_published }}>
+                    <label class="form-check-label" for="isPublished">Published</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

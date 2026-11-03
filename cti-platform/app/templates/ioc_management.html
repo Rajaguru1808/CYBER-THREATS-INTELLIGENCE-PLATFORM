@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block title %}IOC Management{% endblock %}
+{% block content %}
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h2><i class="bi bi-bullseye"></i> IOC Management</h2>
+        <p class="text-muted">Manage Indicators of Compromise: IPs, domains, URLs, emails, hashes</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('ioc.bulk_check_form') }}" class="btn btn-outline-primary">
+            <i class="bi bi-stack"></i> Bulk Check
+        </a>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addIocModal">
+            <i class="bi bi-plus-lg"></i> Add IOC
+        </button>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="row g-2" method="get">
+            <div class="col-md-3">
+                <input type="text" class="form-control" name="q" placeholder="Search value..."
+                       value="{{ filters.q }}">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="type">
+                    <option value="">All Types</option>
+                    {% for t in ['ip','domain','url','email','hash_md5','hash_sha1','hash_sha256'] %}
+                    <option value="{{ t }}" {{ 'selected' if filters.type == t }}>{{ t|replace('_',' ')|upper }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" name="severity">
+                    <option value="">All Severities</option>
+                    {% for s in ['critical','high','medium','low'] %}
+                    <option value="{{ s }}" {{ 'selected' if filters.severity == s }}>{{ s|upper }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-primary w-100" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th>Type</th><th>Value</th><th>Severity</th><th>Source</th>
+                    <th>Correlated</th><th>Event</th><th>Added</th><th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ioc in iocs %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ ioc.ioc_type|replace('_',' ')|upper }}</span></td>
+                    <td class="text-break" style="max-width:280px;">{{ ioc.ioc_value }}</td>
+                    <td><span class="badge severity-{{ ioc.severity }}">{{ ioc.severity|upper }}</span></td>
+                    <td><span class="text-muted small">{{ ioc.source }}</span></td>
+                    <td>
+                        {% if ioc.is_correlated %}
+                        <span class="badge bg-info"><i class="bi bi-link-45deg"></i> {{ ioc.correlation_count }}</span>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if ioc.event %}
+                        <a href="{{ url_for('event.view_event', event_id=ioc.event.id) }}" class="small">{{ ioc.event.title[:25] }}</a>
+                        {% else %}<span class="text-muted small">Unassigned</span>{% endif %}
+                    </td>
+                    <td class="small text-muted">{{ ioc.created_at.strftime('%d %b %Y') }}</td>
+                    <td class="text-end">
+                        <form method="post" action="{{ url_for('ioc.enrich_ioc', ioc_id=ioc.id) }}" class="d-inline">
+                            <button class="btn btn-sm btn-outline-success" title="Enrich via VT/OTX/AbuseIPDB">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                        </form>
+                        <button class="btn btn-sm btn-outline-secondary" title="Edit"
+                                data-bs-toggle="modal" data-bs-target="#editIocModal{{ ioc.id }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="post" action="{{ url_for('ioc.delete_ioc', ioc_id=ioc.id) }}" class="d-inline"
+                              onsubmit="return confirm('Delete this IOC?');">
+                            <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+
+                <!-- Edit modal for this IOC -->
+                <div class="modal fade" id="editIocModal{{ ioc.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <form method="post" action="{{ url_for('ioc.update_ioc', ioc_id=ioc.id) }}">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit IOC</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted small">{{ ioc.ioc_value }}</p>
+                                <div class="mb-3">
+                                    <label class="form-label">Severity</label>
+                                    <select class="form-select" name="severity">
+                                        {% for s in ['critical','high','medium','low'] %}
+                                        <option value="{{ s }}" {{ 'selected' if ioc.severity == s }}>{{ s|upper }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Category</label>
+                                    <input type="text" class="form-control" name="category" value="{{ ioc.category or '' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Tags (comma-separated)</label>
+                                    <input type="text" class="form-control" name="tags" value="{{ ioc.tags or '' }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Linked Event</label>
+                                    <select class="form-select" name="event_id">
+                                        <option value="">Unassigned</option>
+                                        {% for ev in events %}
+                                        <option value="{{ ev.id }}" {{ 'selected' if ioc.event_id == ev.id }}>{{ ev.title }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                        </div>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <tr><td colspan="8" class="text-center text-muted py-4">No IOCs found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if pagination and pagination.pages > 1 %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center flex-wrap">
+        {% for p in range(1, pagination.pages + 1) %}
+        <li class="page-item {{ 'active' if p == pagination.page }}">
+            <a class="page-link" href="{{ url_for('ioc.list_iocs', page=p, **filters) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Add IOC Modal -->
+<div class="modal fade" id="addIocModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" action="{{ url_for('ioc.create_ioc') }}">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New IOC</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">IOC Type</label>
+                    <select class="form-select" name="ioc_type" required>
+                        <option value="ip">IP Address</option>
+                        <option value="domain">Domain</option>
+                        <option value="url">URL</option>
+                        <option value="email">Email</option>
+                        <option value="hash_md5">MD5 Hash</option>
+                        <option value="hash_sha1">SHA1 Hash</option>
+                        <option value="hash_sha256">SHA256 Hash</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">IOC Value</label>
+                    <input type="text" class="form-control" name="ioc_value" required
+                           placeholder="e.g. 185.220.101.45 or evil-domain.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Severity</label>
+                    <select class="form-select" name="severity">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Category</label>
+                    <input type="text" class="form-control" name="category" value="Network activity">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tags (comma-separated)</label>
+                    <input type="text" class="form-control" name="tags" placeholder="malware,c2,campaign-x">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Link to Event (optional)</label>
+                    <select class="form-select" name="event_id">
+                        <option value="">Unassigned</option>
+                        {% for ev in events %}
+                        <option value="{{ ev.id }}">{{ ev.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Add IOC</button>
+            </div>
+        </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

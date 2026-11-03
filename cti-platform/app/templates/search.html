@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Threat Search{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h2><i class="bi bi-search"></i> Threat Search</h2>
+    <p class="text-muted">Search by IP, domain, URL, email, or file hash across all IOCs</p>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control form-control-lg"
+                   placeholder="e.g. 185.220.101.45, evil-domain.com, or a SHA256 hash"
+                   value="{{ query_text }}">
+            <button class="btn btn-primary btn-lg"><i class="bi bi-search"></i> Search</button>
+        </form>
+        {% if detected_type %}
+        <p class="text-muted small mt-2 mb-0">Detected type: <span class="badge bg-secondary">{{ detected_type|replace('_',' ')|upper }}</span></p>
+        {% endif %}
+    </div>
+</div>
+
+{% if results is not none %}
+<div class="card">
+    <div class="card-header">Results ({{ results|length }})</div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Type</th><th>Value</th><th>Severity</th><th>Source</th><th>Event</th></tr></thead>
+            <tbody>
+            {% for ioc in results %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ ioc.ioc_type|replace('_',' ')|upper }}</span></td>
+                    <td>{{ ioc.ioc_value }}</td>
+                    <td><span class="badge severity-{{ ioc.severity }}">{{ ioc.severity|upper }}</span></td>
+                    <td class="small text-muted">{{ ioc.source }}</td>
+                    <td>
+                        {% if ioc.event %}
+                        <a href="{{ url_for('event.view_event', event_id=ioc.event.id) }}">{{ ioc.event.title[:30] }}</a>
+                        {% else %}<span class="text-muted small">Unassigned</span>{% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="5" class="text-center text-muted py-4">No matches found for "{{ query_text }}".</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
