@@ -1,4 +1,4 @@
-# Cyber Threat Intelligence (CTI) Platform using MISP
+# Cyber Threat Intelligence (CTI) Platform using Indicators of compromise
 
 A full-stack Cyber Threat Intelligence platform built with **Flask**, **MySQL**, and **Bootstrap**, integrating **MISP**, **VirusTotal**, **AlienVault OTX**, and **AbuseIPDB** for indicator enrichment, correlation, and reporting. Built as a final-year Cyber Security mini project, following clean **MVC architecture**.
 
